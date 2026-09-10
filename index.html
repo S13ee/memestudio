@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MemeStudio 5.0</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --face:#c0c0c0;
+    --face-light:#dfdfdf;
+    --hi:#ffffff;
+    --sh:#808080;
+    --dksh:#0a0a0a;
+    --titlebar1:#000080;
+    --titlebar2:#1084d0;
+    --select:#000080;
+    --text:#000000;
+    --canvas-bg-a:#ffffff;
+    --canvas-bg-b:#c0c0c0;
+    --font-ui: Tahoma, "MS Sans Serif", Geneva, Verdana, sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family: var(--font-ui);
+    font-size:11px;
+    background:#008080;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 8px);
+    min-height:100vh;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:18px;
+    color:var(--text);
+    overflow-x:auto;
+  }
+
+  /* ---------- 베벨 유틸 ---------- */
+  .raised{
+    background:var(--face);
+    box-shadow:
+      inset -1px -1px 0 var(--dksh),
+      inset 1px 1px 0 var(--hi),
+      inset -2px -2px 0 var(--sh),
+      inset 2px 2px 0 var(--face-light);
+  }
+  .sunken{
+    background:var(--face);
+    box-shadow:
+      inset 1px 1px 0 var(--dksh),
+      inset -1px -1px 0 var(--hi),
+      inset 2px 2px 0 var(--sh),
+      inset -2px -2px 0 var(--face-light);
+  }
+  .field{
+    background:#fff;
+    box-shadow:
+      inset 1px 1px 0 var(--dksh),
+      inset -1px -1px 0 var(--hi),
+      inset 2px 2px 0 var(--sh);
+    border:none;
+    font-family: var(--font-ui);
+    font-size:11px;
+    padding:3px 4px;
+    color:var(--text);
+  }
+  button.btn{
+    font-family: var(--font-ui);
+    font-size:11px;
+    padding:4px 10px;
+    cursor:pointer;
+    color:var(--text);
+  }
+  button.btn:active{
+    box-shadow:
+      inset 1px 1px 0 var(--dksh),
+      inset -1px -1px 0 var(--hi),
+      inset 2px 2px 0 var(--sh),
+      inset -2px -2px 0 var(--face-light);
+    padding-top:5px; padding-left:11px;
+  }
+  button.btn:disabled{
+    color:#808080;
+    text-shadow:1px 1px 0 var(--hi);
+    cursor:default;
+  }
+  button.tool{
+    width:34px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    padding:0;
+  }
+  button.tool svg{ width:16px; height:16px; display:block; }
+  button.tool:active, button.tool.active{
+    box-shadow:
+      inset 1px 1px 0 var(--dksh),
+      inset -1px -1px 0 var(--hi),
+      inset 2px 2px 0 var(--sh),
+      inset -2px -2px 0 var(--face-light);
+  }
+
+  /* ---------- 창 ---------- */
+  .app-window{
+    width:1080px;
+    flex-shrink:0;
+  }
+  .titlebar{
+    background:linear-gradient(90deg, var(--titlebar1), var(--titlebar2));
+    color:#fff;
+    font-weight:bold;
+    font-size:12px;
+    padding:3px 4px 3px 6px;
+    display:flex; align-items:center; justify-content:space-between;
+    letter-spacing:0.3px;
+  }
+  .titlebar .tb-left{ display:flex; align-items:center; gap:6px; }
+  .titlebar .tb-icon{
+    width:14px; height:14px; background:#fff; display:inline-block;
+    clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);
+  }
+  .tb-buttons{ display:flex; gap:3px; }
+  .tb-btn{
+    width:16px; height:14px;
+    background:var(--face);
+    box-shadow:
+      inset -1px -1px 0 var(--dksh),
+      inset 1px 1px 0 var(--hi);
+    font-size:9px; line-height:14px; text-align:center;
+    color:#000; cursor:default; user-select:none;
+  }
+  .menubar{
+    background:var(--face);
+    display:flex; gap:14px;
+    padding:3px 8px;
+    border-bottom:1px solid var(--sh);
+    font-size:11px;
+  }
+  .menubar span{ padding:1px 4px; }
+  .menubar span:hover{ background:var(--select); color:#fff; }
+
+  .workspace{
+    background:var(--face);
+    display:flex;
+    padding:6px;
+    gap:6px;
+  }
+
+  /* ---------- 툴박스 ---------- */
+  .toolbox{
+    width:40px;
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    flex-shrink:0;
+  }
+
+  /* ---------- 캔버스 영역 ---------- */
+  .canvas-area{
+    flex:1;
+    min-width:0;
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+  }
+  .ratio-bar{
+    display:flex; gap:4px; align-self:flex-start;
+    padding:4px;
+  }
+  .canvas-frame{
+    padding:6px;
+  }
+  #stage{
+    display:block;
+    background:#fff;
+    max-width:520px;
+    max-height:640px;
+    width:auto; height:auto;
+    cursor:grab;
+  }
+  #stage.dragging{ cursor:grabbing; }
+
+  .statusbar{
+    align-self:stretch;
+    padding:3px 8px;
+    font-size:11px;
+    display:flex; justify-content:space-between;
+    color:#000;
+  }
+  .statusbar.err{ color:#800000; font-weight:bold; }
+
+  /* ---------- 우측 패널 ---------- */
+  .side-panel{
+    width:250px;
+    flex-shrink:0;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .panel-box{ padding:0; }
+  .panel-title{
+    background:linear-gradient(90deg, var(--titlebar1), var(--titlebar2));
+    color:#fff; font-weight:bold; font-size:11px;
+    padding:2px 6px;
+  }
+  .panel-body{ padding:8px; }
+  .field-row{ margin-bottom:8px; }
+  .field-row label{
+    display:block; font-weight:bold; margin-bottom:3px;
+  }
+  textarea#text-input{
+    width:100%; resize:vertical; min-height:54px; font-size:12px;
+    font-family: var(--font-ui);
+  }
+  input[type="range"]{ width:100%; }
+  input[type="color"]{
+    width:44px; height:22px; padding:0; border:none; cursor:pointer;
+  }
+  .row-inline{ display:flex; align-items:center; gap:8px; }
+  .hint{ font-size:10px; color:#404040; margin-top:2px; }
+
+  .layer-list{ max-height:150px; overflow-y:auto; }
+  .layer-row{
+    display:flex; align-items:center; gap:6px;
+    padding:4px 6px;
+    cursor:pointer;
+    border-bottom:1px solid var(--sh);
+  }
+  .layer-row:hover{ background:#dcdcf5; }
+  .layer-row.selected{ background:var(--select); color:#fff; }
+  .layer-thumb{
+    width:30px; height:30px; flex-shrink:0;
+    background:#fff;
+    box-shadow: inset 1px 1px 0 var(--dksh);
+  }
+  .layer-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .layer-name{ flex:1; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .layer-del{
+    width:16px; height:16px; font-size:10px; line-height:14px; text-align:center;
+    flex-shrink:0; cursor:pointer;
+  }
+  .empty-note{ padding:10px; font-size:10px; color:#404040; text-align:center; }
+
+  .btn-col{ display:flex; flex-direction:column; gap:4px; }
+  .btn-row2{ display:flex; gap:4px; }
+  .btn-row2 .btn{ flex:1; }
+
+  #file-input, #json-input{ display:none; }
+
+  .drop-hint{
+    position:absolute;
+    font-size:11px; color:#606060; text-align:center;
+    pointer-events:none;
+  }
+  .canvas-wrap{ position:relative; display:inline-block; }
+  .canvas-frame.drag-over{
+    box-shadow:
+      inset 1px 1px 0 var(--dksh),
+      inset -1px -1px 0 var(--hi),
+      inset 2px 2px 0 var(--sh),
+      0 0 0 2px #000080;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-window raised">
+  <div class="titlebar">
+    <div class="tb-left"><span class="tb-icon"></span> MemeStudio 5.0 — 제목 없음</div>
+    <div class="tb-buttons">
+      <div class="tb-btn">_</div>
+      <div class="tb-btn">□</div>
+      <div class="tb-btn">×</div>
+    </div>
+  </div>
+  <div class="menubar">
+    <span>파일(F)</span><span>편집(E)</span><span>이미지(I)</span><span>레이어(L)</span><span>선택(S)</span><span>도움말(H)</span>
+  </div>
+
+  <div class="workspace">
+
+    <!-- 툴박스 -->
+    <div class="toolbox raised">
+      <button class="tool raised" id="tool-upload" title="파일 열기">
+        <svg viewBox="0 0 16 16"><path fill="#000" d="M1 4h5l1.5 2H15v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4z"/></svg>
+      </button>
+      <button class="tool raised" id="tool-text" title="문구 도구">
+        <svg viewBox="0 0 16 16"><path fill="#000" d="M2 3h12v2.4h-5V14H7V5.4H2V3z"/></svg>
+      </button>
+      <button class="tool raised active" id="tool-move" title="이동 도구">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 1.2v13.6M1.2 8h13.6M8 1.2l-2.1 2.1M8 1.2l2.1 2.1M8 14.8l-2.1-2.1M8 14.8l2.1-2.1M1.2 8l2.1-2.1M1.2 8l2.1 2.1M14.8 8l-2.1-2.1M14.8 8l-2.1 2.1"/>
+        </svg>
+      </button>
+      <button class="tool raised" id="tool-color" title="색상 피커">
+        <svg viewBox="0 0 16 16"><path fill="#000" d="M8 1a7 7 0 1 0 3.2 13.2c.6-.3.5-1.1-.1-1.4-.4-.2-.7-.6-.7-1 0-.7.6-1.2 1.3-1.2H13a3 3 0 0 0 3-3C16 3.7 12.4 1 8 1z"/><circle cx="4.6" cy="7.2" r="1.1" fill="#fff"/><circle cx="7.2" cy="4.4" r="1.1" fill="#fff"/><circle cx="10.8" cy="5.4" r="1.1" fill="#fff"/></svg>
+      </button>
+      <button class="tool raised" id="tool-size" title="크기 조절">
+        <svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.4" stroke-linecap="round"><circle cx="6.8" cy="6.8" r="4.3"/><line x1="10" y1="10" x2="14.5" y2="14.5"/></svg>
+      </button>
+      <button class="tool raised" id="tool-download" title="다른 이름으로 저장">
+        <svg viewBox="0 0 16 16"><path fill="#000" d="M2 2h9l3 3v9H2V2z"/><rect x="4.2" y="2" width="5.6" height="3.6" fill="#fff"/><rect x="4.2" y="9" width="7.6" height="5" fill="#fff"/></svg>
+      </button>
+    </div>
+
+    <!-- 캔버스 -->
+    <div class="canvas-area">
+      <div class="ratio-bar raised" style="align-self:flex-end;">
+        <button class="btn raised ratio-btn active" data-ratio="1:1">1:1</button>
+        <button class="btn raised ratio-btn" data-ratio="4:5">4:5</button>
+        <button class="btn raised ratio-btn" data-ratio="9:16">9:16</button>
+      </div>
+
+      <div class="canvas-frame sunken">
+        <div class="canvas-wrap">
+          <canvas id="stage" width="1080" height="1080"></canvas>
+        </div>
+      </div>
+
+      <div class="statusbar sunken" id="statusbar">
+        <span id="status-left">1080 × 1080 px</span>
+        <span id="status-right">MemeStudio 5.0</span>
+      </div>
+
+      <input type="file" id="file-input" accept="image/png,image/jpeg">
+      <input type="file" id="json-input" accept="application/json">
+    </div>
+
+    <!-- 우측 패널 -->
+    <div class="side-panel">
+
+      <div class="panel-box raised">
+        <div class="panel-title">속성</div>
+        <div class="panel-body">
+          <div class="field-row">
+            <label for="text-input">문구</label>
+            <textarea id="text-input" class="field" placeholder="문구를 입력하세요..."></textarea>
+          </div>
+          <div class="field-row">
+            <label>크기</label>
+            <input type="range" id="size-input" min="24" max="160" value="64">
+          </div>
+          <div class="row-inline field-row">
+            <div>
+              <label>색상</label>
+              <input type="color" id="color-input" value="#ffffff">
+            </div>
+            <div style="flex:1;">
+              <label>&nbsp;</label>
+              <div class="hint">캔버스 위에서 문구를 드래그해 위치를 옮길 수 있습니다.</div>
+            </div>
+          </div>
+          <button class="btn raised" id="btn-upload-main" style="width:100%;">이미지 불러오기 (PNG·JPEG)</button>
+        </div>
+      </div>
+
+      <div class="panel-box raised">
+        <div class="panel-title">템플릿</div>
+        <div class="panel-body">
+          <div class="btn-col">
+            <div class="btn-row2">
+              <button class="btn raised" id="btn-save-new">새 템플릿 저장</button>
+              <button class="btn raised" id="btn-update" disabled>현재 템플릿 업데이트</button>
+            </div>
+            <div class="btn-row2">
+              <button class="btn raised" id="btn-export-json">JSON 내보내기</button>
+              <button class="btn raised" id="btn-import-json">JSON 가져오기</button>
+            </div>
+          </div>
+        </div>
+        <div class="layer-list sunken" id="layer-list">
+          <div class="empty-note">저장된 템플릿이 없습니다.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="statusbar raised" style="margin:0 6px 6px;">
+    <span id="global-status">준비됨</span>
+    <span>© 1998-스러운 느낌으로 제작됨</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 상태 ================= */
+  var state = {
+    imageDataURL: null,
+    imgObj: null,
+    text: "",
+    xFrac: 0.5,
+    yFrac: 0.5,
+    fontSize: 64,
+    color: "#ffffff",
+    ratio: "1:1"
+  };
+  var currentTemplateId = null;
+
+  var RATIOS = {
+    "1:1": {w:1080, h:1080},
+    "4:5": {w:1080, h:1350},
+    "9:16": {w:1080, h:1920}
+  };
+
+  var canvas = document.getElementById('stage');
+  var ctx = canvas.getContext('2d');
+  var statusLeft = document.getElementById('status-left');
+  var statusRight = document.getElementById('status-right');
+  var globalStatus = document.getElementById('global-status');
+
+  function setError(msg){
+    var sb = document.getElementById('statusbar');
+    sb.classList.add('err');
+    statusRight.textContent = msg;
+    setTimeout(function(){
+      sb.classList.remove('err');
+      statusRight.textContent = "MemeStudio 5.0";
+    }, 3500);
+  }
+  function setStatus(msg){
+    globalStatus.textContent = msg;
+    setTimeout(function(){ globalStatus.textContent = "준비됨"; }, 2200);
+  }
+
+  /* ================= 텍스트 줄바꿈 ================= */
+  function toGraphemes(str){
+    return Array.from(str);
+  }
+
+  function wrapParagraph(ctx, text, maxWidth){
+    if(text === "") return [""];
+    var words = text.split(/(\s+)/).filter(function(w){ return w.length>0; });
+    var lines = [];
+    var current = "";
+    for(var i=0;i<words.length;i++){
+      var word = words[i];
+      var test = current + word;
+      if(ctx.measureText(test).width <= maxWidth || current===""){
+        // 단어 자체가 너무 길면(예: 긴 한글/이모지 연속) 글자 단위로 쪼갬
+        if(ctx.measureText(test).width > maxWidth && current===""){
+          var chars = toGraphemes(word);
+          var chunk = "";
+          for(var c=0;c<chars.length;c++){
+            var testChunk = chunk + chars[c];
+            if(ctx.measureText(testChunk).width > maxWidth && chunk!==""){
+              lines.push(chunk);
+              chunk = chars[c];
+            } else {
+              chunk = testChunk;
+            }
+          }
+          current = chunk;
+        } else {
+          current = test;
+        }
+      } else {
+        lines.push(current.replace(/\s+$/,''));
+        current = word.replace(/^\s+/,'');
+      }
+    }
+    if(current !== "" || lines.length===0) lines.push(current);
+    return lines;
+  }
+
+  function wrapText(ctx, text, maxWidth){
+    var paragraphs = text.split("\n");
+    var out = [];
+    for(var p=0;p<paragraphs.length;p++){
+      var pl = wrapParagraph(ctx, paragraphs[p], maxWidth);
+      for(var i=0;i<pl.length;i++) out.push(pl[i]);
+    }
+    return out;
+  }
+
+  /* ================= 렌더 (미리보기 = 다운로드, 동일 함수) ================= */
+  var lastTextBox = null; // {x,y,w,h} 캔버스 픽셀 기준, 드래그 히트테스트용
+
+  function drawCheckerboard(ctx, w, h){
+    var size = 20;
+    for(var y=0;y<h;y+=size){
+      for(var x=0;x<w;x+=size){
+        var even = ((x/size)+(y/size)) % 2 === 0;
+        ctx.fillStyle = even ? "#ffffff" : "#c0c0c0";
+        ctx.fillRect(x,y,size,size);
+      }
+    }
+  }
+
+  function render(){
+    var dim = RATIOS[state.ratio];
+    canvas.width = dim.w;
+    canvas.height = dim.h;
+
+    // 배경(투명 이미지·빈 상태 모두 대비되는 체크무늬)
+    drawCheckerboard(ctx, canvas.width, canvas.height);
+
+    if(state.imgObj){
+      var iw = state.imgObj.naturalWidth, ih = state.imgObj.naturalHeight;
+      var scale = Math.max(canvas.width/iw, canvas.height/ih);
+      var dw = iw*scale, dh = ih*scale;
+      var dx = (canvas.width-dw)/2, dy = (canvas.height-dh)/2;
+      ctx.drawImage(state.imgObj, dx, dy, dw, dh);
+    } else {
+      ctx.fillStyle = "#707070";
+      ctx.font = "16px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("이미지를 불러오세요 (PNG · JPEG)", canvas.width/2, canvas.height/2);
+    }
+
+    // 문구
+    lastTextBox = null;
+    if(state.text && state.text.length>0){
+      var maxWidth = canvas.width*0.86;
+      ctx.font = "bold " + state.fontSize + "px Impact, Haettenschweiler, 'Arial Narrow Bold', " + getComputedStyle(document.body).fontFamily;
+      var lines = wrapText(ctx, state.text, maxWidth);
+      var lineHeight = state.fontSize*1.12;
+      var totalH = lineHeight*lines.length;
+      var cx = canvas.width*state.xFrac;
+      var cy = canvas.height*state.yFrac;
+      var startY = cy - totalH/2 + lineHeight/2;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = Math.max(2, state.fontSize*0.08);
+      ctx.fillStyle = state.color;
+
+      var maxLineW = 0;
+      for(var i=0;i<lines.length;i++){
+        var ly = startY + i*lineHeight;
+        ctx.strokeText(lines[i], cx, ly);
+        ctx.fillText(lines[i], cx, ly);
+        maxLineW = Math.max(maxLineW, ctx.measureText(lines[i]).width);
+      }
+      lastTextBox = {
+        x: cx - maxLineW/2 - 10,
+        y: cy - totalH/2 - 10,
+        w: maxLineW + 20,
+        h: totalH + 20
+      };
+    }
+
+    statusLeft.textContent = canvas.width + " × " + canvas.height + " px";
+  }
+
+  /* ================= 이미지 업로드 (파일 선택 + 드래그&드롭) ================= */
+  var fileInput = document.getElementById('file-input');
+  function triggerUpload(){ fileInput.click(); }
+  document.getElementById('tool-upload').addEventListener('click', triggerUpload);
+  document.getElementById('btn-upload-main').addEventListener('click', triggerUpload);
+
+  function handleFile(file){
+    if(!file) return;
+    var okType = (file.type === 'image/png' || file.type === 'image/jpeg');
+    var okExt = /\.(png|jpe?g)$/i.test(file.name);
+    if(!okType || !okExt){
+      setError("✕ 지원하지 않는 파일 형식입니다 (PNG, JPEG만 가능) — 기존 작업은 유지됩니다");
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        state.imageDataURL = e.target.result;
+        state.imgObj = img;
+        render();
+        setStatus("이미지를 불러왔습니다");
+      };
+      img.onerror = function(){
+        setError("✕ 이미지를 여는 데 실패했습니다 — 기존 작업은 유지됩니다");
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){
+      setError("✕ 파일을 읽는 데 실패했습니다");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  fileInput.addEventListener('change', function(){
+    var file = fileInput.files[0];
+    fileInput.value = "";
+    handleFile(file);
+  });
+
+  /* 드래그&드롭 — 파일 형식 제한 없이 아무 파일이나 떨어뜨릴 수 있어서
+     지원하지 않는 파일 거부 로직을 실제로 테스트할 수 있는 경로 */
+  /* 브라우저가 드롭된 파일을 자체적으로 새로 열어버리는 기본 동작을 전역으로 차단 */
+  ['dragover','drop'].forEach(function(evtName){
+    window.addEventListener(evtName, function(e){ e.preventDefault(); });
+  });
+
+  var dropZone = document.querySelector('.canvas-frame');
+  ['dragenter','dragover'].forEach(function(evtName){
+    dropZone.addEventListener(evtName, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    });
+  });
+  ['dragleave','drop'].forEach(function(evtName){
+    dropZone.addEventListener(evtName, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+    });
+  });
+  dropZone.addEventListener('drop', function(e){
+    var dt = e.dataTransfer;
+    if(!dt || !dt.files || dt.files.length===0) return;
+    handleFile(dt.files[0]);
+  });
+
+  /* ================= 문구 컨트롤 ================= */
+  var textInput = document.getElementById('text-input');
+  textInput.addEventListener('input', function(){
+    state.text = textInput.value;
+    render();
+  });
+
+  var sizeInput = document.getElementById('size-input');
+  sizeInput.addEventListener('input', function(){
+    state.fontSize = parseInt(sizeInput.value, 10);
+    render();
+  });
+  document.getElementById('tool-size').addEventListener('click', function(){ sizeInput.focus(); });
+
+  var colorInput = document.getElementById('color-input');
+  colorInput.addEventListener('input', function(){
+    state.color = colorInput.value;
+    render();
+  });
+  document.getElementById('tool-color').addEventListener('click', function(){ colorInput.click(); });
+
+  document.getElementById('tool-text').addEventListener('click', function(){ textInput.focus(); });
+
+  /* ================= 드래그로 위치 조절 ================= */
+  var dragging = false;
+  function canvasPosFromEvent(evt){
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    return { x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY };
+  }
+  function pointInBox(p, box){
+    return box && p.x>=box.x && p.x<=box.x+box.w && p.y>=box.y && p.y<=box.y+box.h;
+  }
+  canvas.addEventListener('mousedown', function(e){
+    var p = canvasPosFromEvent(e);
+    if(pointInBox(p, lastTextBox)){
+      dragging = true;
+      canvas.classList.add('dragging');
+    }
+  });
+  window.addEventListener('mousemove', function(e){
+    if(!dragging) return;
+    var p = canvasPosFromEvent(e);
+    state.xFrac = Math.min(1, Math.max(0, p.x/canvas.width));
+    state.yFrac = Math.min(1, Math.max(0, p.y/canvas.height));
+    render();
+  });
+  window.addEventListener('mouseup', function(){
+    dragging = false;
+    canvas.classList.remove('dragging');
+  });
+  document.getElementById('tool-move').addEventListener('click', function(){});
+
+  /* ================= 화면비 ================= */
+  var ratioBtns = document.querySelectorAll('.ratio-btn');
+  ratioBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      ratioBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      state.ratio = btn.getAttribute('data-ratio');
+      render();
+    });
+  });
+
+  /* ================= 다운로드 ================= */
+  function downloadPNG(){
+    render(); // 다운로드 직전 최신 상태로 다시 그려서 미리보기=파일 100% 일치 보장
+    var link = document.createElement('a');
+    link.download = 'meme-card-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    setStatus("PNG로 저장되었습니다");
+  }
+  document.getElementById('tool-download').addEventListener('click', downloadPNG);
+
+  /* ================= 템플릿 (localStorage) ================= */
+  var STORAGE_KEY = 'meme_studio_templates_v1';
+
+  function loadTemplates(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      if(!Array.isArray(arr)) return [];
+      return arr;
+    }catch(e){ return []; }
+  }
+  function saveTemplates(arr){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); return true; }
+    catch(e){ setError("✕ 저장 공간이 부족하거나 저장에 실패했습니다"); return false; }
+  }
+  function makeId(){
+    return 'tpl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+  function isValidTemplate(t){
+    if(!t || typeof t !== 'object') return false;
+    if(typeof t.imageDataURL !== 'string' && t.imageDataURL !== null) return false;
+    if(typeof t.text !== 'string') return false;
+    if(typeof t.xFrac !== 'number' || typeof t.yFrac !== 'number') return false;
+    if(typeof t.fontSize !== 'number') return false;
+    if(typeof t.color !== 'string') return false;
+    if(!RATIOS[t.ratio]) return false;
+    return true;
+  }
+
+  function currentTemplateData(){
+    return {
+      imageDataURL: state.imageDataURL,
+      text: state.text,
+      xFrac: state.xFrac,
+      yFrac: state.yFrac,
+      fontSize: state.fontSize,
+      color: state.color,
+      ratio: state.ratio
+    };
+  }
+
+  function applyTemplateData(t){
+    state.imageDataURL = t.imageDataURL;
+    state.text = t.text;
+    state.xFrac = t.xFrac;
+    state.yFrac = t.yFrac;
+    state.fontSize = t.fontSize;
+    state.color = t.color;
+    state.ratio = t.ratio;
+
+    textInput.value = state.text;
+    sizeInput.value = state.fontSize;
+    colorInput.value = state.color;
+    ratioBtns.forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-ratio')===state.ratio);
+    });
+
+    if(state.imageDataURL){
+      var img = new Image();
+      img.onload = function(){
+        state.imgObj = img;
+        render();
+      };
+      img.src = state.imageDataURL;
+    } else {
+      state.imgObj = null;
+      render();
+    }
+  }
+
+  function renderLayerList(){
+    var list = document.getElementById('layer-list');
+    var templates = loadTemplates();
+    list.innerHTML = "";
+    if(templates.length===0){
+      list.innerHTML = '<div class="empty-note">저장된 템플릿이 없습니다.</div>';
+      return;
+    }
+    templates.forEach(function(t){
+      var row = document.createElement('div');
+      row.className = 'layer-row' + (t.id===currentTemplateId ? ' selected' : '');
+
+      var thumb = document.createElement('div');
+      thumb.className = 'layer-thumb';
+      if(t.imageDataURL){
+        var img = document.createElement('img');
+        img.src = t.imageDataURL;
+        thumb.appendChild(img);
+      }
+
+      var name = document.createElement('div');
+      name.className = 'layer-name';
+      name.textContent = t.name || (t.text ? t.text.slice(0,14) : '(문구 없음)');
+
+      var del = document.createElement('div');
+      del.className = 'layer-del raised';
+      del.textContent = '×';
+      del.title = '삭제';
+      del.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var arr = loadTemplates().filter(function(x){ return x.id !== t.id; });
+        saveTemplates(arr);
+        if(currentTemplateId === t.id){
+          currentTemplateId = null;
+          document.getElementById('btn-update').disabled = true;
+        }
+        renderLayerList();
+        setStatus("템플릿을 삭제했습니다");
+      });
+
+      row.appendChild(thumb);
+      row.appendChild(name);
+      row.appendChild(del);
+
+      row.addEventListener('click', function(){
+        currentTemplateId = t.id;
+        applyTemplateData(t);
+        document.getElementById('btn-update').disabled = false;
+        renderLayerList();
+        setStatus("템플릿을 불러왔습니다");
+      });
+
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById('btn-save-new').addEventListener('click', function(){
+    var templates = loadTemplates();
+    var data = currentTemplateData();
+    data.id = makeId();
+    data.name = (state.text ? state.text.slice(0,14) : '템플릿 ' + (templates.length+1));
+    templates.push(data);
+    if(saveTemplates(templates)){
+      currentTemplateId = data.id;
+      document.getElementById('btn-update').disabled = false;
+      renderLayerList();
+      setStatus("새 템플릿으로 저장했습니다 (" + templates.length + "개)");
+    }
+  });
+
+  document.getElementById('btn-update').addEventListener('click', function(){
+    if(!currentTemplateId) return;
+    var templates = loadTemplates();
+    var idx = templates.findIndex(function(t){ return t.id===currentTemplateId; });
+    if(idx===-1){ setError("✕ 업데이트할 템플릿을 찾지 못했습니다"); return; }
+    var data = currentTemplateData();
+    data.id = currentTemplateId;
+    data.name = templates[idx].name;
+    templates[idx] = data;
+    if(saveTemplates(templates)){
+      renderLayerList();
+      setStatus("템플릿을 업데이트했습니다");
+    }
+  });
+
+  /* ================= JSON 내보내기 / 가져오기 ================= */
+  document.getElementById('btn-export-json').addEventListener('click', function(){
+    var templates = loadTemplates();
+    if(templates.length===0){
+      setError("✕ 내보낼 템플릿이 없습니다");
+      return;
+    }
+    var blob = new Blob([JSON.stringify(templates, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.download = 'meme-studio-templates.json';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus("JSON으로 내보냈습니다");
+  });
+
+  var jsonInput = document.getElementById('json-input');
+  document.getElementById('btn-import-json').addEventListener('click', function(){ jsonInput.click(); });
+  jsonInput.addEventListener('change', function(){
+    var file = jsonInput.files[0];
+    jsonInput.value = "";
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var parsed;
+      try{
+        parsed = JSON.parse(e.target.result);
+      }catch(err){
+        setError("✕ JSON 문법 오류 — 가져오기를 취소했습니다 (기존 템플릿 유지됨)");
+        return;
+      }
+      var incoming = Array.isArray(parsed) ? parsed : [parsed];
+      for(var i=0;i<incoming.length;i++){
+        if(!isValidTemplate(incoming[i])){
+          setError("✕ 필수 항목이 빠진 템플릿이 있습니다 — 가져오기를 취소했습니다 (기존 템플릿 유지됨)");
+          return;
+        }
+      }
+      // 검증 통과 후에만 반영, 기존 목록에 병합(새 id 부여)
+      var templates = loadTemplates();
+      incoming.forEach(function(t){
+        var clean = {
+          id: makeId(),
+          name: t.name || (t.text ? String(t.text).slice(0,14) : '가져온 템플릿'),
+          imageDataURL: t.imageDataURL,
+          text: t.text,
+          xFrac: t.xFrac,
+          yFrac: t.yFrac,
+          fontSize: t.fontSize,
+          color: t.color,
+          ratio: t.ratio
+        };
+        templates.push(clean);
+      });
+      if(saveTemplates(templates)){
+        renderLayerList();
+        setStatus(incoming.length + "개 템플릿을 가져왔습니다");
+      }
+    };
+    reader.onerror = function(){
+      setError("✕ 파일을 읽는 데 실패했습니다 — 기존 템플릿 유지됨");
+    };
+    reader.readAsText(file);
+  });
+
+  /* ================= 초기화 ================= */
+  render();
+  renderLayerList();
+})();
+</script>
+
+</body>
+</html>
