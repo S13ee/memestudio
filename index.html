@@ -773,11 +773,17 @@
     var list = document.getElementById('layer-list');
     var templates = loadTemplates();
     list.innerHTML = "";
+    var q = searchQuery.trim().toLowerCase();
+
+    // 저장된 템플릿이 없더라도 검색어가 있으면 검색 결과 없음으로 처리
+    // (T05-T08: 빈 초기 상태에서 검색 시 오류 없이 "검색 결과 없음" 표시)
     if(templates.length===0){
-      list.innerHTML = '<div class="empty-note">저장된 템플릿이 없습니다.</div>';
+      list.innerHTML = q !== ""
+        ? '<div class="empty-note">검색 결과 없음</div>'
+        : '<div class="empty-note">저장된 템플릿이 없습니다.</div>';
       return;
     }
-    var q = searchQuery.trim().toLowerCase();
+
     var visible = templates;
     if(q !== ""){
       visible = templates.filter(function(t){
