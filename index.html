@@ -358,6 +358,9 @@
       <div class="panel-box raised">
         <div class="panel-title">템플릿</div>
         <div class="panel-body">
+          <div class="field-row">
+            <input type="text" id="template-search" class="field" style="width:100%;" placeholder="템플릿 검색 (이름 또는 문구)...">
+          </div>
           <div class="btn-col">
             <div class="btn-row2">
               <button class="btn raised" id="btn-save-new">새 템플릿 저장</button>
@@ -399,6 +402,7 @@
     ratio: "1:1"
   };
   var currentTemplateId = null;
+  var searchQuery = "";
 
   var RATIOS = {
     "1:1": {w:1080, h:1080},
@@ -773,7 +777,20 @@
       list.innerHTML = '<div class="empty-note">저장된 템플릿이 없습니다.</div>';
       return;
     }
-    templates.forEach(function(t){
+    var q = searchQuery.trim().toLowerCase();
+    var visible = templates;
+    if(q !== ""){
+      visible = templates.filter(function(t){
+        var name = (t.name || "").toLowerCase();
+        var text = (t.text || "").toLowerCase();
+        return name.indexOf(q) !== -1 || text.indexOf(q) !== -1;
+      });
+    }
+    if(visible.length===0){
+      list.innerHTML = '<div class="empty-note">검색 결과 없음</div>';
+      return;
+    }
+    visible.forEach(function(t){
       var row = document.createElement('div');
       row.className = 'layer-row' + (t.id===currentTemplateId ? ' selected' : '');
 
@@ -914,6 +931,13 @@
       setError("✕ 파일을 읽는 데 실패했습니다 — 기존 템플릿 유지됨");
     };
     reader.readAsText(file);
+  });
+
+  /* ================= 검색/필터 ================= */
+  var searchInput = document.getElementById('template-search');
+  searchInput.addEventListener('input', function(){
+    searchQuery = searchInput.value;
+    renderLayerList();
   });
 
   /* ================= 초기화 ================= */
